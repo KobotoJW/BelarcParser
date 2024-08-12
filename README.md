@@ -18,10 +18,11 @@ Folder
 |- main.py OR belarc_parser-v0.5.exe
 ```
 
-Taki układ spowoduje utworzenie 2 wierszy z danymi komputerów z nazwami Sala1 i Sala2 w kolumnie Pomieszczenie.
+Taki układ spowoduje utworzenie pliku z 2 wierszami z danymi komputerów z nazwami Sala1 i Sala2 w kolumnie Pomieszczenie.
+
 Skrypt uruchamiamy klasycznie: `python main.py`.
 Plik wynikowy pojawi się w folderze na tym samym poziomie, z którego uruchomiono skrypt.
 
-Plik .exe można stworzyć poleceniem `pyinstaller -F --hidden-import pyexcel_io.writers main.py`.
+Plik .exe można stworzyć poleceniem `pyinstaller -F --hidden-import pyexcel_io.writers main.py`. (Teraz dostępny do pobrania w Releases)
 
-Jeśli używamy pliku .exe umieszczamy go w tym samym miejscu.
+Jeśli używamy pliku .exe umieszczamy go w tym samym miejscu zamiast kodu.
