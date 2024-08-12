@@ -40,169 +40,110 @@ def extract_html_paths():
 
     return htmls
 
-def parse_html(path):
-    pomieszczenie = ""
-    nazwa_komputera = ""
-    sprzet = ""
-    procesor = ""
-    ram = ""
-    dysk = ""
-    windows = ""
-    klucz_windows = ""
-    office = ""
-    klucz_office = ""
-    antywirus = ""
-    do_kiedy = ""
-    mac = ""
+def get_pomieszczenie(path):
+    return path.split("\\")[1]
 
+def get_nazwa_komputera(soup):
+    try:
+        return soup.find('th', string='Computer Name:').find_next_sibling('td').text
+    except AttributeError:
+        try:
+            return soup.find('th', string='Nazwa komputera:').find_next_sibling('td').text
+        except AttributeError:
+            return "Błąd"
+
+def get_sprzet(soup):
+    for table in soup.find_all('table'):
+        caption = table.find('caption')
+        if caption and caption.text.strip() in ['System Model', 'Model systemu']:
+            return table.find('td').contents[0].strip() if caption.text.strip() == 'System Model' else table.find('td').contents[2].strip("systemu :")
+    return ""
+
+def get_procesor(soup):
+    for table in soup.find_all('table'):
+        caption = table.find('caption')
+        if caption and caption.text.strip() in ['Processor a', 'Procesor a']:
+            return table.find('td').contents[0].strip().replace("gigahertz", "GHz").replace("gigaherców", "GHz")
+    return ""
+
+def get_ram(soup):
+    for table in soup.find_all('table'):
+        caption = table.find('caption')
+        if caption and caption.text.strip() in ['Memory Modules c,d', 'Moduły pamięci c,d']:
+            ram_text = int(table.find('td').contents[0].strip('Megabytes Usable Installed Memory \n \t').strip('Megabajty Użyteczne zainstalowane gniazdo pamięci'))
+            return f"{(ram_text / 1024).__round__(0)} GB"
+    return ""
+
+def get_dysk(soup):
+    for table in soup.find_all('table'):
+        caption = table.find('caption')
+        if caption and caption.text.strip() in ['Drives', 'Dyski']:
+            dysk_text = table.find('td').contents
+            for elem in dysk_text:
+                if "Hard drive" in elem or "Dysk twardy" in elem:
+                    return elem.strip().split("--")[0]
+    return ""
+
+def get_windows(soup):
+    for table in soup.find_all('table'):
+        caption = table.find('caption')
+        if caption and 'Software Licenses' in caption.text:
+            win_text = table.find('tr').contents[1].text.split("\n")
+            for elem in win_text:
+                if 'Microsoft - Windows' in elem:
+                    win_text = elem.strip('Microsoft - Windows').split(" ")
+                    win_text = [item for item in win_text if not item.startswith("(x") and item != '(Key:']
+                    win_text[-1] = win_text[-1].replace(')e', '')
+                    return ' '.join(win_text[:-1]), win_text[-1]
+    return "", ""
+
+def get_office(soup):
+    for table in soup.find_all('table'):
+        caption = table.find('caption')
+        if caption and 'Software Licenses' in caption.text:
+            office_text = table.find('tr').contents[1].text.split("\n")
+            for elem in office_text:
+                if 'Microsoft - Office' in elem:
+                    office_text = elem.strip('Microsoft - Office').split(" ")
+                    office_text = [item for item in office_text if item != '(Key:']
+                    office_text[-1] = office_text[-1].replace(')', '')
+                    return office_text[0], office_text[2]
+    return "Brak", ""
+
+def get_antywirus(soup):
+    for table in soup.find_all('table'):
+        caption = table.find('caption')
+        if caption and ('Virus Protection' in caption.text.strip() or 'Ochrona przed wirusami' in caption.text.strip()):
+            return table.find('td').contents[1].text.strip().split("\n")[0]
+    return ""
+
+def get_mac(soup):
+    for table in soup.find_all('table'):
+        caption = table.find('caption')
+        if caption and caption.text.strip() in ['Communications', 'Komunikacji']:
+            mac_text = table.find('td').contents[3].text.split("\n")
+            for elem in mac_text:
+                if "Physical\xa0Address" in elem:
+                    return ':'.join([item for item in elem.strip().split(":")[1:]])
+    return ""
+
+def parse_html(path):
     with open(path, 'r', encoding='utf-8') as file:
         content = file.read()
         soup = BeautifulSoup(content, 'html.parser')
-        tables = soup.find_all('table')
-        # for table in tables:
-        #     print(table.find('caption'))
 
-        pomieszczenie = path.split("\\")[1]
-        ##########################################
-        if (soup.find('th', string = 'Computer Name:') != None):
-            nazwa_komputera = soup.find('th', string = 'Computer Name:').find_next_sibling('td').text
-        else:
-            try:
-                nazwa_komputera = soup.find('th', string = 'Nazwa komputera:').find_next_sibling('td').text
-            except AttributeError:
-                nazwa_komputera = "Błąd"
-        ##########################################
-        system_model_text = ""
-        for table in tables:
-            caption = table.find('caption')
-            if caption and caption.text.strip() == 'System Model':
-                system_model_text = table.find('td').contents[0].strip()
-                break
-            elif caption and caption.text.strip() == 'Model systemu':
-                system_model_text = table.find('td').contents[2].strip("systemu :")
-                break
-        sprzet = system_model_text
-        ##########################################
-        processor_text = ""
-        for table in tables:
-            caption = table.find('caption')
-            if caption and caption.text.strip() == 'Processor a':
-                processor_text = table.find('td').contents[0].strip().replace("gigahertz", "GHz")
-                break
-            elif caption and caption.text.strip() == 'Procesor a':
-                processor_text = table.find('td').contents[0].strip().replace("gigaherców", "GHz")
-                break
-        if 'processor_text' in locals():
-            procesor = processor_text
-        ##########################################
-        ram_text = ""
-        for table in tables:
-            caption = table.find('caption')
-            if caption and caption.text.strip() == 'Memory Modules c,d':
-                ram_text = int(table.find('td').contents[0].strip('Megabytes Usable Installed Memory \n \t'))
-                break
-            elif caption and caption.text.strip() == 'Moduły pamięci c,d':
-                ram_text = int(table.find('td').contents[0].strip('Megabajty Użyteczne zainstalowane gniazdo pamięci'))
-                break
-        if ram_text != "":
-            ram_text = (ram_text / 1024).__round__(0)
-            ram_text = str(ram_text) + " GB"
-        ram = ram_text
-        ##########################################
-        dysk_text = ""
-        for table in tables:
-            caption = table.find('caption')
-            if caption and caption.text.strip() == 'Drives':
-                dysk_text = table.find('td').contents
-                for elem in dysk_text:
-                    if "Hard drive" in elem:
-                        dysk_text = elem.strip().split("--")[0]
-                break
-            elif caption and caption.text.strip() == 'Dyski':
-                dysk_text = table.find('td').contents
-                for elem in dysk_text:
-                    if "Dysk twardy" in elem:
-                        dysk_text = elem.strip().split("--")[0]
-                break
-        if dysk_text:
-            dysk = dysk_text
-        ##########################################
-        win_text = ""
-        office_text = ""
-        for table in tables:
-            caption = table.find('caption')
-            if caption and 'Software Licenses' in caption.text:
-                win_text = table.find('tr').contents[1].text
-                break
-        win_text = win_text.split("\n")
-        office_text = win_text
-        for elem in win_text:
-            if 'Microsoft - Windows' in elem:
-                win_text = elem.strip('Microsoft - Windows').split(" ")
-        for i in range(len(win_text)):
-            if win_text[i].startswith("(x"):
-                win_text[i] = win_text[i][1:4]
-        try:
-            win_text.remove('(Key:')
-        except ValueError:
-            pass
-        win_text[-1] = win_text[-1].replace(')e', '')
-        windows = ' '.join([item for item in win_text[0:-1]])
-        if win_text[-1]:
-            klucz_windows = win_text[-1]
-        ##########################################
-        for elem in office_text:
-            if 'Microsoft - Office' in elem:
-                office_text = elem.strip('Microsoft - Office').split(" ")
-                break
-            if 'Microsoft - Office' not in office_text:
-                office_text = 'Brak'
-        if office_text != 'Brak':
-            office_text.remove('(Key:')
-            office_text[-1].replace(')', '')
-            office_text.pop(1)
-            klucz_office = office_text[1]
-            office_text = office_text[0]
-        office = office_text
-        ##########################################
-        antivirus_text = ""
-        for table in tables:
-            caption = table.find('caption')
-            if caption and 'Virus Protection' in caption.text.strip():
-                antivirus_text = table.find('td').contents[1].text.strip().split("\n")[0]
-                break
-            elif caption and 'Ochrona przed wirusami' in caption.text.strip():
-                antivirus_text = table.find('td').contents[1].text.strip().split("\n")[0]
-                break
-        if antivirus_text:
-            antywirus = antivirus_text
-        ##########################################
-        do_kiedy = ""
-        ##########################################
-        mac_text = ""
-        for table in tables:
-            caption = table.find('caption')
-            if caption and caption.text.strip() == 'Communications':
-                mac_text = table.find('td').contents[3].text
-                mac_text = mac_text.split("\n")
-                for elem in mac_text:
-                    if "Physical\xa0Address" in elem:
-                        mac_text = ':'.join([item for item in elem.strip().split(":")[1:]])
-                        break
-                break
-            elif caption and caption.text.strip() == 'Komunikacji':
-                mac_text = table.find('td').contents[3].text
-                mac_text = mac_text.split("\n")
-                for elem in mac_text:
-                    if "Physical\xa0Address" in elem:
-                        mac_text = ':'.join([item for item in elem.strip().split(":")[1:]])
-                        break
-        if mac_text:
-            mac = mac_text
+        pomieszczenie = get_pomieszczenie(path)
+        nazwa_komputera = get_nazwa_komputera(soup)
+        sprzet = get_sprzet(soup)
+        procesor = get_procesor(soup)
+        ram = get_ram(soup)
+        dysk = get_dysk(soup)
+        windows, klucz_windows = get_windows(soup)
+        office, klucz_office = get_office(soup)
+        antywirus = get_antywirus(soup)
+        mac = get_mac(soup)
 
-        #print(mac)
-        return [0, pomieszczenie, nazwa_komputera, sprzet, procesor, ram, dysk, windows, klucz_windows, office, klucz_office, antywirus, do_kiedy, mac]
-
+        return [0, pomieszczenie, nazwa_komputera, sprzet, procesor, ram, dysk, windows, klucz_windows, office, klucz_office, antywirus, "", mac]
 def main():
     lp = 1
     buff = create_sheet()
