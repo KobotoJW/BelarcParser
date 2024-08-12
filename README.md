@@ -10,12 +10,10 @@ Każdy plik powinien znajdować się w swoim własnym folderze nazwanym nazwą p
 Folder
 |
 |- Sala1
-|  | 
-|  -- Belarc Advisor Computer Profile.html 
+|  |-- Belarc Advisor Computer Profile.html 
 |
 |- Sala2
-|  |
-|  -- Belarc Advisor Computer Profile.html 
+|  |-- Belarc Advisor Computer Profile.html 
 |
 |- main.py
 ```
